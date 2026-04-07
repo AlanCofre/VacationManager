@@ -1,0 +1,93 @@
+# =========================
+# SISTEMA / GENERALES
+# =========================
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
+*.swp
+
+# =========================
+# IDEs / EDITORES
+# =========================
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# =========================
+# DEPENDENCIAS
+# =========================
+node_modules/
+vendor/
+venv/
+.env/
+
+# =========================
+# ARCHIVOS DE ENTORNO
+# =========================
+.env
+.env.local
+.env.*.local
+
+# =========================
+# BUILD / OUTPUT
+# =========================
+dist/
+build/
+out/
+target/
+bin/
+obj/
+
+# =========================
+# ARCHIVOS COMPILADOS
+# =========================
+*.class
+*.o
+*.pyc
+*.exe
+*.dll
+
+# =========================
+# BASES DE DATOS
+# =========================
+*.sqlite
+*.db
+
+# =========================
+# TEST / COVERAGE
+# =========================
+coverage/
+*.lcov
+
+# =========================
+# LOGS
+# =========================
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# =========================
+# ARCHIVOS GENERADOS
+# =========================
+*.zip
+*.tar.gz
+*.rar
+
+# =========================
+# OS ESPECÍFICO
+# =========================
+# Mac
+.AppleDouble
+.LSOverride
+
+# Windows
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
