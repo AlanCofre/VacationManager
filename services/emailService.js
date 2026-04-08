@@ -4,7 +4,7 @@ const apiInstance = new BrevoClient({
   apiKey: process.env.BREVO_API_KEY
 });
 
-const sendEmail = async (to, subject, text) => {
+const sendEmail = async (to, subject, html) => {
   try {
     await apiInstance.transactionalEmails.sendTransacEmail({
       sender: {
@@ -13,7 +13,7 @@ const sendEmail = async (to, subject, text) => {
       },
       to: [{ email: to }],
       subject: subject,
-      textContent: text
+      htmlContent: html 
     });
 
     console.log('Email enviado a:', to);

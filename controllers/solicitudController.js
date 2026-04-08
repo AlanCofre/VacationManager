@@ -1,5 +1,6 @@
 const db = require('../config/db');
 const sendEmail = require('../services/emailService');
+const { renderTemplate } = require('../services/templateService');
 
 exports.listarSolicitudes = async (req, res) => {
   const [rows] = await db.query('SELECT * FROM solicitudes');
@@ -15,17 +16,22 @@ exports.crearSolicitud = async (req, res) => {
     [user_id, fecha_inicio, fecha_fin, comentario]
   );
 
-  // obtener todos los jefes
   const [jefes] = await db.query(
     "SELECT email FROM users WHERE rol = 'JEFE'"
   );
 
-  // enviar a todos
   for (let jefe of jefes) {
+    const html = renderTemplate('nuevaSolicitud', {
+      nombre: "Empleado", // ideal: traer desde DB
+      fecha_inicio,
+      fecha_fin,
+      comentario
+    });
+
     await sendEmail(
       jefe.email,
       "Nueva solicitud",
-      "Hay una nueva solicitud pendiente"
+      html
     );
   }
 
@@ -43,17 +49,23 @@ exports.aprobarSolicitud = async (req, res) => {
   );
 
   const [rows] = await db.query(
-    `SELECT u.email 
+    `SELECT u.email, u.nombre, s.fecha_inicio, s.fecha_fin
      FROM solicitudes s
      JOIN users u ON s.user_id = u.id
      WHERE s.id = ?`,
     [id]
   );
 
+  const html = renderTemplate('solicitudAprobada', {
+    nombre: rows[0].nombre,
+    fecha_inicio: rows[0].fecha_inicio,
+    fecha_fin: rows[0].fecha_fin
+  });
+
   await sendEmail(
     rows[0].email,
     "Solicitud aprobada",
-    "Tu solicitud fue aprobada"
+    html
   );
 
   res.json({ message: 'Aprobada' });
@@ -71,19 +83,25 @@ exports.rechazarSolicitud = async (req, res) => {
   );
 
   const [rows] = await db.query(
-    `SELECT u.email 
+    `SELECT u.email, u.nombre, s.fecha_inicio, s.fecha_fin
      FROM solicitudes s
      JOIN users u ON s.user_id = u.id
      WHERE s.id = ?`,
     [id]
   );
 
+  const html = renderTemplate('solicitudRechazada', {
+    nombre: rows[0].nombre,
+    fecha_inicio: rows[0].fecha_inicio,
+    fecha_fin: rows[0].fecha_fin,
+    motivo
+  });
+
   await sendEmail(
     rows[0].email,
     "Solicitud rechazada",
-    `Tu solicitud fue rechazada. Motivo: ${motivo}`
+    html
   );
 
   res.json({ message: 'Rechazada' });
 };
-
