@@ -20,9 +20,12 @@ exports.crearSolicitud = async (req, res) => {
     "SELECT email FROM users WHERE rol = 'JEFE'"
   );
 
+  const [userRows] = await db.query('SELECT nombre FROM users WHERE id = ?', [user_id]);
+
+
   for (let jefe of jefes) {
     const html = renderTemplate('nuevaSolicitud', {
-      nombre: "Empleado", // ideal: traer desde DB
+      nombre: userRows[0].nombre,
       fecha_inicio,
       fecha_fin,
       comentario
