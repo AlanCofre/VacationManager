@@ -39,5 +39,13 @@ exports.login = async (req, res) => {
     process.env.JWT_SECRET
   );
 
-  res.json({ token });
+  res.json({
+    token,
+    user: {
+      id: user.id,
+      nombre: user.nombre,
+      email: user.email,
+      rol: user.rol
+    }
+  });
 };

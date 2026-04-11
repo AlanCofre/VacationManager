@@ -3,108 +3,182 @@ const sendEmail = require('../services/emailService');
 const { renderTemplate } = require('../services/templateService');
 
 exports.listarSolicitudes = async (req, res) => {
-  const [rows] = await db.query('SELECT * FROM solicitudes');
-  res.json(rows);
+  try {
+    const [rows] = await db.query(`
+      SELECT s.*, u.nombre, u.email, u.rol
+      FROM solicitudes s
+      JOIN users u ON s.user_id = u.id
+      ORDER BY s.fecha_creacion DESC
+    `);
+
+    res.json(rows);
+  } catch (error) {
+    res.status(500).json({ error: 'Error al listar solicitudes' });
+  }
 };
 
 exports.crearSolicitud = async (req, res) => {
-  const { user_id, fecha_inicio, fecha_fin, comentario } = req.body;
+  try {
+    const { user_id, fecha_inicio, fecha_fin, comentario } = req.body;
 
-  await db.query(
-    `INSERT INTO solicitudes (user_id, fecha_inicio, fecha_fin, comentario)
-     VALUES (?, ?, ?, ?)`,
-    [user_id, fecha_inicio, fecha_fin, comentario]
-  );
+    if (!user_id || !fecha_inicio || !fecha_fin) {
+      return res.status(400).json({ error: 'Faltan campos obligatorios' });
+    }
 
-  const [jefes] = await db.query(
-    "SELECT email FROM users WHERE rol = 'JEFE'"
-  );
-
-  const [userRows] = await db.query('SELECT nombre FROM users WHERE id = ?', [user_id]);
-
-
-  for (let jefe of jefes) {
-    const html = renderTemplate('nuevaSolicitud', {
-      nombre: userRows[0].nombre,
-      fecha_inicio,
-      fecha_fin,
-      comentario
-    });
-
-    await sendEmail(
-      jefe.email,
-      "Nueva solicitud",
-      html
+    const [usuarios] = await db.query(
+      'SELECT * FROM users WHERE id = ?',
+      [user_id]
     );
-  }
 
-  res.json({ message: 'Solicitud creada' });
+    if (usuarios.length === 0) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    const usuario = usuarios[0];
+
+    if (usuario.rol !== 'TRABAJADOR') {
+      return res.status(403).json({ error: 'Solo un trabajador puede crear solicitudes' });
+    }
+
+    const [existentes] = await db.query(
+      `SELECT * FROM solicitudes 
+       WHERE user_id = ? AND estado = 'PENDIENTE'`,
+      [user_id]
+    );
+
+    if (existentes.length > 0) {
+      return res.status(400).json({ error: 'El trabajador ya tiene una solicitud pendiente' });
+    }
+
+    await db.query(
+      `INSERT INTO solicitudes (user_id, fecha_inicio, fecha_fin, comentario)
+       VALUES (?, ?, ?, ?)`,
+      [user_id, fecha_inicio, fecha_fin, comentario]
+    );
+
+    const [jefes] = await db.query(
+      "SELECT email FROM users WHERE rol = 'JEFE'"
+    );
+
+    for (let jefe of jefes) {
+      const html = renderTemplate('nuevaSolicitud', {
+        nombre: usuario.nombre,
+        fecha_inicio,
+        fecha_fin,
+        comentario
+      });
+
+      await sendEmail(
+        jefe.email,
+        'Nueva solicitud',
+        html
+      );
+    }
+
+    res.json({ message: 'Solicitud creada' });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al crear solicitud' });
+  }
 };
 
 exports.aprobarSolicitud = async (req, res) => {
-  const { id } = req.params;
+  try {
+    const { id } = req.params;
 
-  await db.query(
-    `UPDATE solicitudes 
-     SET estado = 'APROBADA', fecha_resolucion = NOW()
-     WHERE id = ?`,
-    [id]
-  );
+    const [solicitudes] = await db.query(
+      'SELECT * FROM solicitudes WHERE id = ?',
+      [id]
+    );
 
-  const [rows] = await db.query(
-    `SELECT u.email, u.nombre, s.fecha_inicio, s.fecha_fin
-     FROM solicitudes s
-     JOIN users u ON s.user_id = u.id
-     WHERE s.id = ?`,
-    [id]
-  );
+    if (solicitudes.length === 0) {
+      return res.status(404).json({ error: 'Solicitud no encontrada' });
+    }
 
-  const html = renderTemplate('solicitudAprobada', {
-    nombre: rows[0].nombre,
-    fecha_inicio: rows[0].fecha_inicio,
-    fecha_fin: rows[0].fecha_fin
-  });
+    if (solicitudes[0].estado !== 'PENDIENTE') {
+      return res.status(400).json({ error: 'Solo se pueden aprobar solicitudes pendientes' });
+    }
 
-  await sendEmail(
-    rows[0].email,
-    "Solicitud aprobada",
-    html
-  );
+    await db.query(
+      `UPDATE solicitudes
+       SET estado = 'APROBADA', fecha_resolucion = NOW()
+       WHERE id = ?`,
+      [id]
+    );
 
-  res.json({ message: 'Aprobada' });
+    const [rows] = await db.query(
+      `SELECT u.email, u.nombre, s.fecha_inicio, s.fecha_fin
+       FROM solicitudes s
+       JOIN users u ON s.user_id = u.id
+       WHERE s.id = ?`,
+      [id]
+    );
+
+    const html = renderTemplate('solicitudAprobada', {
+      nombre: rows[0].nombre,
+      fecha_inicio: rows[0].fecha_inicio,
+      fecha_fin: rows[0].fecha_fin
+    });
+
+    await sendEmail(
+      rows[0].email,
+      'Solicitud aprobada',
+      html
+    );
+
+    res.json({ message: 'Aprobada' });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al aprobar solicitud' });
+  }
 };
 
 exports.rechazarSolicitud = async (req, res) => {
-  const { id } = req.params;
-  const { motivo } = req.body;
+  try {
+    const { id } = req.params;
+    const { motivo } = req.body;
 
-  await db.query(
-    `UPDATE solicitudes 
-     SET estado = 'RECHAZADA', motivo_rechazo = ?, fecha_resolucion = NOW()
-     WHERE id = ?`,
-    [motivo, id]
-  );
+    const [solicitudes] = await db.query(
+      'SELECT * FROM solicitudes WHERE id = ?',
+      [id]
+    );
 
-  const [rows] = await db.query(
-    `SELECT u.email, u.nombre, s.fecha_inicio, s.fecha_fin
-     FROM solicitudes s
-     JOIN users u ON s.user_id = u.id
-     WHERE s.id = ?`,
-    [id]
-  );
+    if (solicitudes.length === 0) {
+      return res.status(404).json({ error: 'Solicitud no encontrada' });
+    }
 
-  const html = renderTemplate('solicitudRechazada', {
-    nombre: rows[0].nombre,
-    fecha_inicio: rows[0].fecha_inicio,
-    fecha_fin: rows[0].fecha_fin,
-    motivo
-  });
+    if (solicitudes[0].estado !== 'PENDIENTE') {
+      return res.status(400).json({ error: 'Solo se pueden rechazar solicitudes pendientes' });
+    }
 
-  await sendEmail(
-    rows[0].email,
-    "Solicitud rechazada",
-    html
-  );
+    await db.query(
+      `UPDATE solicitudes
+       SET estado = 'RECHAZADA', motivo_rechazo = ?, fecha_resolucion = NOW()
+       WHERE id = ?`,
+      [motivo, id]
+    );
 
-  res.json({ message: 'Rechazada' });
+    const [rows] = await db.query(
+      `SELECT u.email, u.nombre, s.fecha_inicio, s.fecha_fin
+       FROM solicitudes s
+       JOIN users u ON s.user_id = u.id
+       WHERE s.id = ?`,
+      [id]
+    );
+
+    const html = renderTemplate('solicitudRechazada', {
+      nombre: rows[0].nombre,
+      fecha_inicio: rows[0].fecha_inicio,
+      fecha_fin: rows[0].fecha_fin,
+      motivo
+    });
+
+    await sendEmail(
+      rows[0].email,
+      'Solicitud rechazada',
+      html
+    );
+
+    res.json({ message: 'Rechazada' });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al rechazar solicitud' });
+  }
 };

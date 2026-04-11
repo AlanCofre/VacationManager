@@ -1,0 +1,153 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f4f6f8;
+  color: #222;
+}
+
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.header {
+  margin-bottom: 24px;
+}
+
+.header h1 {
+  margin: 0 0 8px;
+  color: #1f3c88;
+}
+
+.header p {
+  margin: 0;
+  color: #555;
+}
+
+.card {
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+}
+
+.hidden {
+  display: none;
+}
+
+.mt {
+  margin-top: 20px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 14px;
+}
+
+label {
+  margin-bottom: 6px;
+  font-weight: bold;
+}
+
+input,
+textarea {
+  padding: 10px 12px;
+  border: 1px solid #ccd3db;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+textarea {
+  resize: vertical;
+}
+
+.btn {
+  border: none;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 14px;
+  cursor: pointer;
+  margin-top: 8px;
+}
+
+.btn.primary {
+  background: #1f7a4d;
+  color: white;
+}
+
+.btn.secondary {
+  background: #1f3c88;
+  color: white;
+}
+
+.btn.aprobar {
+  background: #2e7d32;
+  color: white;
+  margin-right: 8px;
+}
+
+.btn.rechazar {
+  background: #c62828;
+  color: white;
+}
+
+.mensaje {
+  margin-top: 14px;
+  font-weight: bold;
+}
+
+.panel-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.solicitudes-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.solicitud-card {
+  border: 1px solid #e1e6eb;
+  border-radius: 10px;
+  padding: 14px;
+  background: #fafbfc;
+}
+
+.estado {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: bold;
+  margin: 10px 0;
+}
+
+.estado.pendiente {
+  background: #fff3cd;
+  color: #8a6d3b;
+}
+
+.estado.aprobada {
+  background: #d4edda;
+  color: #155724;
+}
+
+.estado.rechazada {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.info {
+  margin: 6px 0;
+}
