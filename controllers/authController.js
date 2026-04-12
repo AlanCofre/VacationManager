@@ -3,16 +3,34 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
 exports.register = async (req, res) => {
-  const { nombre, email, password, rol } = req.body;
+  try {
+    const { nombre, email, password, rol } = req.body;
 
-  const hash = await bcrypt.hash(password, 10);
+    if (!nombre || !email || !password || !rol) {
+      return res.status(400).json({ error: 'Todos los campos son obligatorios' });
+    }
 
-  await db.query(
-    'INSERT INTO users (nombre, email, password_hash, rol) VALUES (?, ?, ?, ?)',
-    [nombre, email, hash, rol]
-  );
+    const [existing] = await db.query(
+      'SELECT id FROM users WHERE email = ?',
+      [email]
+    );
 
-  res.json({ message: 'Usuario creado' });
+    if (existing.length > 0) {
+      return res.status(409).json({ error: 'El correo ya está registrado' });
+    }
+
+    const hash = await bcrypt.hash(password, 10);
+
+    await db.query(
+      'INSERT INTO users (nombre, email, password_hash, rol) VALUES (?, ?, ?, ?)',
+      [nombre, email, hash, rol]
+    );
+
+    res.status(201).json({ message: 'Usuario creado correctamente' });
+  } catch (error) {
+    console.error('Register error:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
 };
 
 exports.login = async (req, res) => {

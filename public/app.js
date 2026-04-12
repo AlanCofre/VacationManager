@@ -1,9 +1,15 @@
 const loginView = document.getElementById('loginView');
+const registerView = document.getElementById('registerView');
 const trabajadorView = document.getElementById('trabajadorView');
 const jefeView = document.getElementById('jefeView');
 
 const loginForm = document.getElementById('loginForm');
 const loginMensaje = document.getElementById('loginMensaje');
+const showRegisterBtn = document.getElementById('showRegisterBtn');
+const showLoginBtn = document.getElementById('showLoginBtn');
+
+const registerForm = document.getElementById('registerForm');
+const registerMensaje = document.getElementById('registerMensaje');
 
 const solicitudForm = document.getElementById('solicitudForm');
 const workerMensaje = document.getElementById('workerMensaje');
@@ -47,6 +53,56 @@ loginForm?.addEventListener('submit', async (e) => {
   } catch (error) {
     loginMensaje.textContent = 'Error de conexión con el servidor';
     loginMensaje.style.color = 'red';
+  }
+});
+
+showRegisterBtn?.addEventListener('click', () => {
+  loginView.classList.add('hidden');
+  registerView.classList.remove('hidden');
+  loginMensaje.textContent = '';
+  registerMensaje.textContent = '';
+});
+
+showLoginBtn?.addEventListener('click', () => {
+  registerView.classList.add('hidden');
+  loginView.classList.remove('hidden');
+  loginMensaje.textContent = '';
+  registerMensaje.textContent = '';
+});
+
+registerForm?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  const nombre = document.getElementById('registerNombre').value;
+  const email = document.getElementById('registerEmail').value;
+  const password = document.getElementById('registerPassword').value;
+  const rol = document.getElementById('registerRol').value;
+
+  try {
+    const res = await fetch('/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nombre, email, password, rol })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      registerMensaje.textContent = data.error || 'Error al registrar el usuario';
+      registerMensaje.style.color = 'red';
+      return;
+    }
+
+    registerMensaje.textContent = data.message || 'Usuario registrado correctamente';
+    registerMensaje.style.color = 'green';
+    registerForm.reset();
+
+    setTimeout(() => {
+      showLoginBtn?.click();
+    }, 800);
+  } catch (error) {
+    registerMensaje.textContent = 'Error de conexión con el servidor';
+    registerMensaje.style.color = 'red';
   }
 });
 

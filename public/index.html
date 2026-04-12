@@ -27,6 +27,41 @@
         <button type="submit" class="btn primary">Ingresar</button>
       </form>
       <p id="loginMensaje" class="mensaje"></p>
+      <p>
+        ¿No tienes cuenta?
+        <button id="showRegisterBtn" type="button" class="btn secondary">Regístrate</button>
+      </p>
+    </section>
+
+    <section id="registerView" class="card hidden">
+      <h2>Registro de usuario</h2>
+      <form id="registerForm">
+        <div class="field">
+          <label for="registerNombre">Nombre</label>
+          <input type="text" id="registerNombre" required />
+        </div>
+        <div class="field">
+          <label for="registerEmail">Correo</label>
+          <input type="email" id="registerEmail" required />
+        </div>
+        <div class="field">
+          <label for="registerPassword">Contraseña</label>
+          <input type="password" id="registerPassword" required />
+        </div>
+        <div class="field">
+          <label for="registerRol">Rol</label>
+          <select id="registerRol" required>
+            <option value="TRABAJADOR">TRABAJADOR</option>
+            <option value="JEFE">JEFE</option>
+          </select>
+        </div>
+        <button type="submit" class="btn primary">Crear cuenta</button>
+      </form>
+      <p id="registerMensaje" class="mensaje"></p>
+      <p>
+        ¿Ya tienes cuenta?
+        <button id="showLoginBtn" type="button" class="btn secondary">Iniciar sesión</button>
+      </p>
     </section>
 
     <section id="trabajadorView" class="hidden">
