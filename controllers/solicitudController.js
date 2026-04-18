@@ -82,25 +82,18 @@ exports.aprobarSolicitud = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const [solicitudes] = await db.query(
-      'SELECT * FROM solicitudes WHERE id = ?',
-      [id]
-    );
-
-    if (solicitudes.length === 0) {
-      return res.status(404).json({ error: 'Solicitud no encontrada' });
-    }
-
-    if (solicitudes[0].estado !== 'PENDIENTE') {
-      return res.status(400).json({ error: 'Solo se pueden aprobar solicitudes pendientes' });
-    }
-
-    await db.query(
+    const [result] = await db.query(
       `UPDATE solicitudes
        SET estado = 'APROBADA', fecha_resolucion = NOW()
-       WHERE id = ?`,
+       WHERE id = ? AND estado = 'PENDIENTE'`,
       [id]
     );
+
+    if (result.affectedRows === 0) {
+      return res.status(400).json({
+        error: 'La solicitud no existe o ya fue procesada'
+      });
+    }
 
     const [rows] = await db.query(
       `SELECT u.email, u.nombre, s.fecha_inicio, s.fecha_fin
@@ -123,6 +116,7 @@ exports.aprobarSolicitud = async (req, res) => {
     );
 
     res.json({ message: 'Aprobada' });
+
   } catch (error) {
     res.status(500).json({ error: 'Error al aprobar solicitud' });
   }
@@ -133,25 +127,18 @@ exports.rechazarSolicitud = async (req, res) => {
     const { id } = req.params;
     const { motivo } = req.body;
 
-    const [solicitudes] = await db.query(
-      'SELECT * FROM solicitudes WHERE id = ?',
-      [id]
-    );
-
-    if (solicitudes.length === 0) {
-      return res.status(404).json({ error: 'Solicitud no encontrada' });
-    }
-
-    if (solicitudes[0].estado !== 'PENDIENTE') {
-      return res.status(400).json({ error: 'Solo se pueden rechazar solicitudes pendientes' });
-    }
-
-    await db.query(
+    const [result] = await db.query(
       `UPDATE solicitudes
        SET estado = 'RECHAZADA', motivo_rechazo = ?, fecha_resolucion = NOW()
-       WHERE id = ?`,
+       WHERE id = ? AND estado = 'PENDIENTE'`,
       [motivo, id]
     );
+
+    if (result.affectedRows === 0) {
+      return res.status(400).json({
+        error: 'La solicitud no existe o ya fue procesada'
+      });
+    }
 
     const [rows] = await db.query(
       `SELECT u.email, u.nombre, s.fecha_inicio, s.fecha_fin
@@ -175,6 +162,7 @@ exports.rechazarSolicitud = async (req, res) => {
     );
 
     res.json({ message: 'Rechazada' });
+
   } catch (error) {
     res.status(500).json({ error: 'Error al rechazar solicitud' });
   }
