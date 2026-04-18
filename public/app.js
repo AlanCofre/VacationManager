@@ -1,5 +1,6 @@
 const loginView = document.getElementById('loginView');
 const registerView = document.getElementById('registerView');
+const forgotPasswordView = document.getElementById('forgotPasswordView');
 const trabajadorView = document.getElementById('trabajadorView');
 const jefeView = document.getElementById('jefeView');
 
@@ -7,9 +8,14 @@ const loginForm = document.getElementById('loginForm');
 const loginMensaje = document.getElementById('loginMensaje');
 const showRegisterBtn = document.getElementById('showRegisterBtn');
 const showLoginBtn = document.getElementById('showLoginBtn');
+const showForgotBtn = document.getElementById('showForgotBtn');
+const backToLoginBtn = document.getElementById('backToLoginBtn');
 
 const registerForm = document.getElementById('registerForm');
 const registerMensaje = document.getElementById('registerMensaje');
+
+const forgotForm = document.getElementById('forgotForm');
+const forgotMensaje = document.getElementById('forgotMensaje');
 
 const solicitudForm = document.getElementById('solicitudForm');
 const workerMensaje = document.getElementById('workerMensaje');
@@ -56,20 +62,6 @@ loginForm?.addEventListener('submit', async (e) => {
   }
 });
 
-showRegisterBtn?.addEventListener('click', () => {
-  loginView.classList.add('hidden');
-  registerView.classList.remove('hidden');
-  loginMensaje.textContent = '';
-  registerMensaje.textContent = '';
-});
-
-showLoginBtn?.addEventListener('click', () => {
-  registerView.classList.add('hidden');
-  loginView.classList.remove('hidden');
-  loginMensaje.textContent = '';
-  registerMensaje.textContent = '';
-});
-
 registerForm?.addEventListener('submit', async (e) => {
   e.preventDefault();
 
@@ -98,18 +90,95 @@ registerForm?.addEventListener('submit', async (e) => {
     registerForm.reset();
 
     setTimeout(() => {
-      showLoginBtn?.click();
-    }, 800);
+      mostrarLogin();
+    }, 1000);
   } catch (error) {
     registerMensaje.textContent = 'Error de conexión con el servidor';
     registerMensaje.style.color = 'red';
   }
 });
 
-function mostrarVistaPorRol() {
-  loginView.classList.add('hidden');
+forgotForm?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  const email = document.getElementById('forgotEmail').value;
+
+  try {
+    const res = await fetch('/auth/forgot-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      forgotMensaje.textContent = data.error || 'No se pudo enviar el correo';
+      forgotMensaje.style.color = 'red';
+      return;
+    }
+
+    forgotMensaje.textContent = data.message || 'Correo de recuperación enviado';
+    forgotMensaje.style.color = 'green';
+    forgotForm.reset();
+  } catch (error) {
+    forgotMensaje.textContent = 'Error de conexión con el servidor';
+    forgotMensaje.style.color = 'red';
+  }
+});
+
+showRegisterBtn?.addEventListener('click', mostrarRegistro);
+showLoginBtn?.addEventListener('click', mostrarLogin);
+showForgotBtn?.addEventListener('click', mostrarRecuperacion);
+backToLoginBtn?.addEventListener('click', mostrarLogin);
+
+function mostrarLogin() {
+  loginView.classList.remove('hidden');
+  registerView.classList.add('hidden');
+  forgotPasswordView.classList.add('hidden');
   trabajadorView.classList.add('hidden');
   jefeView.classList.add('hidden');
+
+  loginMensaje.textContent = '';
+  registerMensaje.textContent = '';
+  forgotMensaje.textContent = '';
+}
+
+function mostrarRegistro() {
+  loginView.classList.add('hidden');
+  registerView.classList.remove('hidden');
+  forgotPasswordView.classList.add('hidden');
+  trabajadorView.classList.add('hidden');
+  jefeView.classList.add('hidden');
+
+  loginMensaje.textContent = '';
+  registerMensaje.textContent = '';
+  forgotMensaje.textContent = '';
+}
+
+function mostrarRecuperacion() {
+  loginView.classList.add('hidden');
+  registerView.classList.add('hidden');
+  forgotPasswordView.classList.remove('hidden');
+  trabajadorView.classList.add('hidden');
+  jefeView.classList.add('hidden');
+
+  loginMensaje.textContent = '';
+  registerMensaje.textContent = '';
+  forgotMensaje.textContent = '';
+}
+
+function mostrarVistaPorRol() {
+  loginView.classList.add('hidden');
+  registerView.classList.add('hidden');
+  forgotPasswordView.classList.add('hidden');
+  trabajadorView.classList.add('hidden');
+  jefeView.classList.add('hidden');
+
+  if (!currentUser) {
+    mostrarLogin();
+    return;
+  }
 
   if (currentUser.rol === 'TRABAJADOR') {
     trabajadorView.classList.remove('hidden');
@@ -126,15 +195,19 @@ function cerrarSesion() {
   currentUser = null;
   currentToken = null;
 
-  loginForm.reset();
-  loginView.classList.remove('hidden');
-  trabajadorView.classList.add('hidden');
-  jefeView.classList.add('hidden');
+  loginForm?.reset();
+  registerForm?.reset();
+  forgotForm?.reset();
+  solicitudForm?.reset();
 
-  loginMensaje.textContent = '';
   workerMensaje.textContent = '';
+  loginMensaje.textContent = '';
+  registerMensaje.textContent = '';
+  forgotMensaje.textContent = '';
   miSolicitud.innerHTML = '';
   if (solicitudesLista) solicitudesLista.innerHTML = '';
+
+  mostrarLogin();
 }
 
 solicitudForm?.addEventListener('submit', async (e) => {
@@ -180,7 +253,7 @@ async function cargarMiSolicitud() {
     const res = await fetch('/solicitudes');
     const solicitudes = await res.json();
 
-    const misSolicitudes = solicitudes.filter(s => s.user_id === currentUser.id);
+    const misSolicitudes = solicitudes.filter((s) => s.user_id === currentUser.id);
 
     if (misSolicitudes.length === 0) {
       miSolicitud.innerHTML = '<p>No tienes solicitudes registradas.</p>';
@@ -213,7 +286,7 @@ async function cargarSolicitudes() {
     const res = await fetch('/solicitudes');
     const solicitudes = await res.json();
 
-    const pendientes = solicitudes.filter(s => s.estado === 'PENDIENTE');
+    const pendientes = solicitudes.filter((s) => s.estado === 'PENDIENTE');
 
     solicitudesLista.innerHTML = '';
 
@@ -229,8 +302,8 @@ async function cargarSolicitudes() {
       card.innerHTML = `
         <h3>Solicitud #${solicitud.id}</h3>
         <span class="estado pendiente">${solicitud.estado}</span>
-        <p class="info"><strong>Trabajador:</strong> ${solicitud.nombre}</p>
-        <p class="info"><strong>Correo:</strong> ${solicitud.email}</p>
+        <p class="info"><strong>Trabajador:</strong> ${solicitud.nombre || solicitud.user_id}</p>
+        <p class="info"><strong>Correo:</strong> ${solicitud.email || 'No disponible'}</p>
         <p class="info"><strong>Inicio:</strong> ${formatearFecha(solicitud.fecha_inicio)}</p>
         <p class="info"><strong>Fin:</strong> ${formatearFecha(solicitud.fecha_fin)}</p>
         <p class="info"><strong>Comentario:</strong> ${solicitud.comentario || 'Sin comentario'}</p>
