@@ -19,9 +19,10 @@ exports.listarSolicitudes = async (req, res) => {
 
 exports.crearSolicitud = async (req, res) => {
   try {
-    const { user_id, fecha_inicio, fecha_fin, comentario } = req.body;
+    const user_id = req.user.id; // 🔥 clave: viene del token
+    const { fecha_inicio, fecha_fin, comentario } = req.body;
 
-    if (!user_id || !fecha_inicio || !fecha_fin) {
+    if (!fecha_inicio || !fecha_fin) {
       return res.status(400).json({ error: 'Faltan campos obligatorios' });
     }
 
@@ -36,10 +37,6 @@ exports.crearSolicitud = async (req, res) => {
 
     const usuario = usuarios[0];
 
-    if (usuario.rol !== 'TRABAJADOR') {
-      return res.status(403).json({ error: 'Solo un trabajador puede crear solicitudes' });
-    }
-
     const [existentes] = await db.query(
       `SELECT * FROM solicitudes 
        WHERE user_id = ? AND estado = 'PENDIENTE'`,
@@ -47,7 +44,7 @@ exports.crearSolicitud = async (req, res) => {
     );
 
     if (existentes.length > 0) {
-      return res.status(400).json({ error: 'El trabajador ya tiene una solicitud pendiente' });
+      return res.status(400).json({ error: 'Ya tienes una solicitud pendiente' });
     }
 
     await db.query(
