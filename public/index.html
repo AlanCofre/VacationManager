@@ -121,11 +121,19 @@
         </form>
 
         <p id="workerMensaje" class="mensaje"></p>
+
+        <div id="miSolicitud"></div>
       </div>
 
       <div class="card mt">
-        <h2>Mi solicitud</h2>
-        <div id="miSolicitud"></div>
+        <h2>Mis solicitudes</h2>
+
+        <div class="tabs-solicitudes">
+          <button class="tab-btn active" data-tipo="pendientes">Pendientes</button>
+          <button class="tab-btn" data-tipo="resueltas">Resueltas</button>
+        </div>
+
+        <div id="solicitudesTrabajador" class="solicitudes-lista"></div>
       </div>
     </section>
 

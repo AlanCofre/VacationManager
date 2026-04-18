@@ -4,7 +4,9 @@ const { renderTemplate } = require('../services/templateService');
 
 exports.listarSolicitudes = async (req, res) => {
   try {
-    const [rows] = await db.query(`
+    const { tipo } = req.query;
+
+    let query = `
       SELECT 
         s.id,
         s.user_id,
@@ -21,8 +23,29 @@ exports.listarSolicitudes = async (req, res) => {
         u.rol
       FROM solicitudes s
       JOIN users u ON s.user_id = u.id
-      ORDER BY s.fecha_creacion DESC
-    `);
+    `;
+
+    const conditions = [];
+    const params = [];
+
+    if (req.user.rol !== 'JEFE') {
+      conditions.push('s.user_id = ?');
+      params.push(req.user.id);
+    }
+
+    if (tipo === 'pendientes') {
+      conditions.push(`s.estado = 'PENDIENTE'`);
+    } else if (tipo === 'resueltas') {
+      conditions.push(`s.estado IN ('APROBADA', 'RECHAZADA', 'CANCELADA')`);
+    }
+
+    if (conditions.length > 0) {
+      query += ' WHERE ' + conditions.join(' AND ');
+    }
+
+    query += ' ORDER BY s.fecha_creacion DESC';
+
+    const [rows] = await db.query(query, params);
 
     res.json(rows);
   } catch (error) {
@@ -32,7 +55,7 @@ exports.listarSolicitudes = async (req, res) => {
 
 exports.crearSolicitud = async (req, res) => {
   try {
-    const user_id = req.user.id;   
+    const user_id = req.user.id;
     const { fecha_inicio, fecha_fin, comentario } = req.body;
 
     if (!fecha_inicio || !fecha_fin) {
@@ -60,6 +83,23 @@ exports.crearSolicitud = async (req, res) => {
       return res.status(400).json({ error: 'Ya tienes una solicitud pendiente' });
     }
 
+    const [solapadas] = await db.query(`
+      SELECT id FROM solicitudes
+      WHERE user_id = ?
+      AND estado IN ('PENDIENTE', 'APROBADA')
+      AND (
+        fecha_inicio <= ?
+        AND fecha_fin >= ?
+      )
+      LIMIT 1
+    `, [user_id, fecha_fin, fecha_inicio]);
+
+    if (solapadas.length > 0) {
+      return res.status(400).json({
+        error: 'Ya tienes solicitudes en ese rango de fechas'
+      });
+    }
+
     await db.query(
       `INSERT INTO solicitudes (user_id, fecha_inicio, fecha_fin, comentario)
        VALUES (?, ?, ?, ?)`,
@@ -70,14 +110,9 @@ exports.crearSolicitud = async (req, res) => {
       "SELECT email FROM users WHERE rol = 'JEFE'"
     );
 
-    const [userRows] = await db.query(
-      'SELECT nombre FROM users WHERE id = ?',
-      [user_id]
-    );
-
     for (let jefe of jefes) {
-      const html = renderTemplate('nuevaSolicitud', {
-        nombre: userRows[0].nombre,
+      const htmlJefe = renderTemplate('nuevaSolicitud', {
+        nombre: usuario.nombre,
         fecha_inicio,
         fecha_fin,
         comentario
@@ -86,9 +121,22 @@ exports.crearSolicitud = async (req, res) => {
       await sendEmail(
         jefe.email,
         'Nueva solicitud',
-        html
+        htmlJefe
       );
     }
+
+    const htmlTrabajador = renderTemplate('solicitudEnviada', {
+      nombre: usuario.nombre,
+      fecha_inicio,
+      fecha_fin,
+      comentario
+    });
+
+    await sendEmail(
+      usuario.email,
+      'Solicitud enviada con éxito',
+      htmlTrabajador
+    );
 
     res.json({ message: 'Solicitud creada' });
   } catch (error) {
@@ -99,12 +147,15 @@ exports.crearSolicitud = async (req, res) => {
 exports.aprobarSolicitud = async (req, res) => {
   try {
     const { id } = req.params;
+    const user = req.user;
 
     const [result] = await db.query(
       `UPDATE solicitudes
-       SET estado = 'APROBADA', fecha_resolucion = NOW()
+       SET estado = 'APROBADA', 
+           fecha_resolucion = NOW(),
+           resuelto_por = ?
        WHERE id = ? AND estado = 'PENDIENTE'`,
-      [id]
+      [user.id, id]
     );
 
     if (result.affectedRows === 0) {
@@ -144,12 +195,16 @@ exports.rechazarSolicitud = async (req, res) => {
   try {
     const { id } = req.params;
     const { motivo } = req.body;
+    const user = req.user;
 
     const [result] = await db.query(
       `UPDATE solicitudes
-       SET estado = 'RECHAZADA', motivo_rechazo = ?, fecha_resolucion = NOW()
+       SET estado = 'RECHAZADA', 
+           motivo_rechazo = ?, 
+           fecha_resolucion = NOW(),
+           resuelto_por = ?
        WHERE id = ? AND estado = 'PENDIENTE'`,
-      [motivo, id]
+      [motivo, user.id, id]
     );
 
     if (result.affectedRows === 0) {
