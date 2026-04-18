@@ -116,12 +116,15 @@ exports.crearSolicitud = async (req, res) => {
 exports.aprobarSolicitud = async (req, res) => {
   try {
     const { id } = req.params;
+    const user = req.user;
 
     const [result] = await db.query(
       `UPDATE solicitudes
-       SET estado = 'APROBADA', fecha_resolucion = NOW()
+       SET estado = 'APROBADA', 
+           fecha_resolucion = NOW(),
+           resuelto_por = ?
        WHERE id = ? AND estado = 'PENDIENTE'`,
-      [id]
+      [user.id, id]
     );
 
     if (result.affectedRows === 0) {
@@ -161,12 +164,16 @@ exports.rechazarSolicitud = async (req, res) => {
   try {
     const { id } = req.params;
     const { motivo } = req.body;
+    const user = req.user;
 
     const [result] = await db.query(
       `UPDATE solicitudes
-       SET estado = 'RECHAZADA', motivo_rechazo = ?, fecha_resolucion = NOW()
+       SET estado = 'RECHAZADA', 
+           motivo_rechazo = ?, 
+           fecha_resolucion = NOW(),
+           resuelto_por = ?
        WHERE id = ? AND estado = 'PENDIENTE'`,
-      [motivo, id]
+      [motivo, user.id, id]
     );
 
     if (result.affectedRows === 0) {
