@@ -60,6 +60,23 @@ exports.crearSolicitud = async (req, res) => {
       return res.status(400).json({ error: 'Ya tienes una solicitud pendiente' });
     }
 
+    const [solapadas] = await db.query(`
+      SELECT id FROM solicitudes
+      WHERE user_id = ?
+      AND estado IN ('PENDIENTE', 'APROBADA')
+      AND (
+        fecha_inicio <= ?
+        AND fecha_fin >= ?
+      )
+      LIMIT 1
+    `, [user_id, fecha_fin, fecha_inicio]);
+
+    if (solapadas.length > 0) {
+      return res.status(400).json({
+        error: 'Ya tienes solicitudes en ese rango de fechas'
+      });
+    }
+
     await db.query(
       `INSERT INTO solicitudes (user_id, fecha_inicio, fecha_fin, comentario)
        VALUES (?, ?, ?, ?)`,
