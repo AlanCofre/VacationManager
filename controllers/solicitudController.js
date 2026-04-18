@@ -4,25 +4,50 @@ const { renderTemplate } = require('../services/templateService');
 
 exports.listarSolicitudes = async (req, res) => {
   try {
-    const [rows] = await db.query(`
-      SELECT 
-        s.id,
-        s.user_id,
-        s.fecha_inicio,
-        s.fecha_fin,
-        s.estado,
-        s.comentario,
-        s.motivo_rechazo,
-        s.fecha_creacion,
-        s.fecha_resolucion,
-        s.resuelto_por,
-        u.nombre,
-        u.email,
-        u.rol
-      FROM solicitudes s
-      JOIN users u ON s.user_id = u.id
-      ORDER BY s.fecha_creacion DESC
-    `);
+    let rows;
+
+    if (req.user.rol === 'JEFE') {
+      [rows] = await db.query(`
+        SELECT 
+          s.id,
+          s.user_id,
+          s.fecha_inicio,
+          s.fecha_fin,
+          s.estado,
+          s.comentario,
+          s.motivo_rechazo,
+          s.fecha_creacion,
+          s.fecha_resolucion,
+          s.resuelto_por,
+          u.nombre,
+          u.email,
+          u.rol
+        FROM solicitudes s
+        JOIN users u ON s.user_id = u.id
+        ORDER BY s.fecha_creacion DESC
+      `);
+    } else {
+      [rows] = await db.query(`
+        SELECT 
+          s.id,
+          s.user_id,
+          s.fecha_inicio,
+          s.fecha_fin,
+          s.estado,
+          s.comentario,
+          s.motivo_rechazo,
+          s.fecha_creacion,
+          s.fecha_resolucion,
+          s.resuelto_por,
+          u.nombre,
+          u.email,
+          u.rol
+        FROM solicitudes s
+        JOIN users u ON s.user_id = u.id
+        WHERE s.user_id = ?
+        ORDER BY s.fecha_creacion DESC
+      `, [req.user.id]);
+    }
 
     res.json(rows);
   } catch (error) {
