@@ -177,7 +177,13 @@ solicitudForm?.addEventListener('submit', async (e) => {
 
 async function cargarMiSolicitud() {
   try {
-    const res = await fetch('/solicitudes');
+    const res = await fetch('/solicitudes', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${currentToken}`
+      }
+    });
     const solicitudes = await res.json();
 
     const misSolicitudes = solicitudes.filter(s => s.user_id === currentUser.id);
@@ -210,7 +216,13 @@ async function cargarMiSolicitud() {
 
 async function cargarSolicitudes() {
   try {
-    const res = await fetch('/solicitudes');
+    const res = await fetch('/solicitudes', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${currentToken}`
+      }
+    });
     const solicitudes = await res.json();
 
     const pendientes = solicitudes.filter(s => s.estado === 'PENDIENTE');

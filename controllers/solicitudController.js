@@ -19,7 +19,7 @@ exports.listarSolicitudes = async (req, res) => {
 
 exports.crearSolicitud = async (req, res) => {
   try {
-    const user_id = req.user.id; // 🔥 clave: viene del token
+    const user_id = req.user.id;   
     const { fecha_inicio, fecha_fin, comentario } = req.body;
 
     if (!fecha_inicio || !fecha_fin) {
