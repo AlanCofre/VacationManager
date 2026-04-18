@@ -83,6 +83,23 @@ exports.crearSolicitud = async (req, res) => {
       return res.status(400).json({ error: 'Ya tienes una solicitud pendiente' });
     }
 
+    const [solapadas] = await db.query(`
+      SELECT id FROM solicitudes
+      WHERE user_id = ?
+      AND estado IN ('PENDIENTE', 'APROBADA')
+      AND (
+        fecha_inicio <= ?
+        AND fecha_fin >= ?
+      )
+      LIMIT 1
+    `, [user_id, fecha_fin, fecha_inicio]);
+
+    if (solapadas.length > 0) {
+      return res.status(400).json({
+        error: 'Ya tienes solicitudes en ese rango de fechas'
+      });
+    }
+
     await db.query(
       `INSERT INTO solicitudes (user_id, fecha_inicio, fecha_fin, comentario)
        VALUES (?, ?, ?, ?)`,
@@ -130,12 +147,15 @@ exports.crearSolicitud = async (req, res) => {
 exports.aprobarSolicitud = async (req, res) => {
   try {
     const { id } = req.params;
+    const user = req.user;
 
     const [result] = await db.query(
       `UPDATE solicitudes
-       SET estado = 'APROBADA', fecha_resolucion = NOW()
+       SET estado = 'APROBADA', 
+           fecha_resolucion = NOW(),
+           resuelto_por = ?
        WHERE id = ? AND estado = 'PENDIENTE'`,
-      [id]
+      [user.id, id]
     );
 
     if (result.affectedRows === 0) {
@@ -175,12 +195,16 @@ exports.rechazarSolicitud = async (req, res) => {
   try {
     const { id } = req.params;
     const { motivo } = req.body;
+    const user = req.user;
 
     const [result] = await db.query(
       `UPDATE solicitudes
-       SET estado = 'RECHAZADA', motivo_rechazo = ?, fecha_resolucion = NOW()
+       SET estado = 'RECHAZADA', 
+           motivo_rechazo = ?, 
+           fecha_resolucion = NOW(),
+           resuelto_por = ?
        WHERE id = ? AND estado = 'PENDIENTE'`,
-      [motivo, id]
+      [motivo, user.id, id]
     );
 
     if (result.affectedRows === 0) {

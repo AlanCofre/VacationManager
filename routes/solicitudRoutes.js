@@ -10,6 +10,7 @@ const {
 
 const authenticateJWT = require('../middlewares/authMiddleware');
 const authorizeRoles = require('../middlewares/roleMiddleware');
+const validateFechasSolicitud = require('../middlewares/validateFechasSolicitud');
 
 router.get(
   '/',
@@ -21,6 +22,7 @@ router.post(
   '/',
   authenticateJWT,
   authorizeRoles('TRABAJADOR'),
+  validateFechasSolicitud,
   crearSolicitud
 );
 
