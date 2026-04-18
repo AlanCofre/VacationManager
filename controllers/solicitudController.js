@@ -5,7 +5,20 @@ const { renderTemplate } = require('../services/templateService');
 exports.listarSolicitudes = async (req, res) => {
   try {
     const [rows] = await db.query(`
-      SELECT s.*, u.nombre, u.email, u.rol
+      SELECT 
+        s.id,
+        s.user_id,
+        s.fecha_inicio,
+        s.fecha_fin,
+        s.estado,
+        s.comentario,
+        s.motivo_rechazo,
+        s.fecha_creacion,
+        s.fecha_resolucion,
+        s.resuelto_por,
+        u.nombre,
+        u.email,
+        u.rol
       FROM solicitudes s
       JOIN users u ON s.user_id = u.id
       ORDER BY s.fecha_creacion DESC
@@ -19,9 +32,10 @@ exports.listarSolicitudes = async (req, res) => {
 
 exports.crearSolicitud = async (req, res) => {
   try {
-    const { user_id, fecha_inicio, fecha_fin, comentario } = req.body;
+    const user_id = req.user.id;   
+    const { fecha_inicio, fecha_fin, comentario } = req.body;
 
-    if (!user_id || !fecha_inicio || !fecha_fin) {
+    if (!fecha_inicio || !fecha_fin) {
       return res.status(400).json({ error: 'Faltan campos obligatorios' });
     }
 
@@ -36,10 +50,6 @@ exports.crearSolicitud = async (req, res) => {
 
     const usuario = usuarios[0];
 
-    if (usuario.rol !== 'TRABAJADOR') {
-      return res.status(403).json({ error: 'Solo un trabajador puede crear solicitudes' });
-    }
-
     const [existentes] = await db.query(
       `SELECT * FROM solicitudes 
        WHERE user_id = ? AND estado = 'PENDIENTE'`,
@@ -47,7 +57,7 @@ exports.crearSolicitud = async (req, res) => {
     );
 
     if (existentes.length > 0) {
-      return res.status(400).json({ error: 'El trabajador ya tiene una solicitud pendiente' });
+      return res.status(400).json({ error: 'Ya tienes una solicitud pendiente' });
     }
 
     await db.query(
@@ -60,9 +70,14 @@ exports.crearSolicitud = async (req, res) => {
       "SELECT email FROM users WHERE rol = 'JEFE'"
     );
 
+    const [userRows] = await db.query(
+      'SELECT nombre FROM users WHERE id = ?',
+      [user_id]
+    );
+
     for (let jefe of jefes) {
       const html = renderTemplate('nuevaSolicitud', {
-        nombre: usuario.nombre,
+        nombre: userRows[0].nombre,
         fecha_inicio,
         fecha_fin,
         comentario
@@ -77,7 +92,7 @@ exports.crearSolicitud = async (req, res) => {
 
     res.json({ message: 'Solicitud creada' });
   } catch (error) {
-    res.status(500).json({ error: 'Error al crear solicitud' });
+    res.status(500).json({ error: 'Error al crear la solicitud' });
   }
 };
 
@@ -85,25 +100,18 @@ exports.aprobarSolicitud = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const [solicitudes] = await db.query(
-      'SELECT * FROM solicitudes WHERE id = ?',
-      [id]
-    );
-
-    if (solicitudes.length === 0) {
-      return res.status(404).json({ error: 'Solicitud no encontrada' });
-    }
-
-    if (solicitudes[0].estado !== 'PENDIENTE') {
-      return res.status(400).json({ error: 'Solo se pueden aprobar solicitudes pendientes' });
-    }
-
-    await db.query(
+    const [result] = await db.query(
       `UPDATE solicitudes
        SET estado = 'APROBADA', fecha_resolucion = NOW()
-       WHERE id = ?`,
+       WHERE id = ? AND estado = 'PENDIENTE'`,
       [id]
     );
+
+    if (result.affectedRows === 0) {
+      return res.status(400).json({
+        error: 'La solicitud no existe o ya fue procesada'
+      });
+    }
 
     const [rows] = await db.query(
       `SELECT u.email, u.nombre, s.fecha_inicio, s.fecha_fin
@@ -126,8 +134,9 @@ exports.aprobarSolicitud = async (req, res) => {
     );
 
     res.json({ message: 'Aprobada' });
+
   } catch (error) {
-    res.status(500).json({ error: 'Error al aprobar solicitud' });
+    res.status(500).json({ error: 'Error al aprobar la solicitud' });
   }
 };
 
@@ -136,25 +145,18 @@ exports.rechazarSolicitud = async (req, res) => {
     const { id } = req.params;
     const { motivo } = req.body;
 
-    const [solicitudes] = await db.query(
-      'SELECT * FROM solicitudes WHERE id = ?',
-      [id]
-    );
-
-    if (solicitudes.length === 0) {
-      return res.status(404).json({ error: 'Solicitud no encontrada' });
-    }
-
-    if (solicitudes[0].estado !== 'PENDIENTE') {
-      return res.status(400).json({ error: 'Solo se pueden rechazar solicitudes pendientes' });
-    }
-
-    await db.query(
+    const [result] = await db.query(
       `UPDATE solicitudes
        SET estado = 'RECHAZADA', motivo_rechazo = ?, fecha_resolucion = NOW()
-       WHERE id = ?`,
+       WHERE id = ? AND estado = 'PENDIENTE'`,
       [motivo, id]
     );
+
+    if (result.affectedRows === 0) {
+      return res.status(400).json({
+        error: 'La solicitud no existe o ya fue procesada'
+      });
+    }
 
     const [rows] = await db.query(
       `SELECT u.email, u.nombre, s.fecha_inicio, s.fecha_fin
@@ -178,7 +180,8 @@ exports.rechazarSolicitud = async (req, res) => {
     );
 
     res.json({ message: 'Rechazada' });
+
   } catch (error) {
-    res.status(500).json({ error: 'Error al rechazar solicitud' });
+    res.status(500).json({ error: 'Error al rechazar la solicitud' });
   }
 };

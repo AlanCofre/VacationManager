@@ -26,10 +26,17 @@
         </div>
         <button type="submit" class="btn primary">Ingresar</button>
       </form>
+
       <p id="loginMensaje" class="mensaje"></p>
+
       <p>
         ¿No tienes cuenta?
         <button id="showRegisterBtn" type="button" class="btn secondary">Regístrate</button>
+      </p>
+
+      <p>
+        ¿Olvidaste tu contraseña?
+        <button id="showForgotBtn" type="button" class="btn secondary">Recuperarla</button>
       </p>
     </section>
 
@@ -57,10 +64,30 @@
         </div>
         <button type="submit" class="btn primary">Crear cuenta</button>
       </form>
+
       <p id="registerMensaje" class="mensaje"></p>
+
       <p>
         ¿Ya tienes cuenta?
         <button id="showLoginBtn" type="button" class="btn secondary">Iniciar sesión</button>
+      </p>
+    </section>
+
+    <section id="forgotPasswordView" class="card hidden">
+      <h2>Recuperar contraseña</h2>
+      <form id="forgotForm">
+        <div class="field">
+          <label for="forgotEmail">Correo</label>
+          <input type="email" id="forgotEmail" required />
+        </div>
+        <button type="submit" class="btn primary">Enviar correo de recuperación</button>
+      </form>
+
+      <p id="forgotMensaje" class="mensaje"></p>
+
+      <p>
+        ¿Recordaste tu contraseña?
+        <button id="backToLoginBtn" type="button" class="btn secondary">Volver al login</button>
       </p>
     </section>
 

@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+
 const {
   listarSolicitudes,
   crearSolicitud,
@@ -7,8 +8,34 @@ const {
   rechazarSolicitud
 } = require('../controllers/solicitudController');
 
-router.get('/', listarSolicitudes);
-router.post('/', crearSolicitud);
-router.put('/:id/aprobar', aprobarSolicitud);
-router.put('/:id/rechazar', rechazarSolicitud);
+const authenticateJWT = require('../middlewares/authMiddleware');
+const authorizeRoles = require('../middlewares/roleMiddleware');
+
+router.get(
+  '/',
+  authenticateJWT,
+  listarSolicitudes
+);
+
+router.post(
+  '/',
+  authenticateJWT,
+  authorizeRoles('TRABAJADOR'),
+  crearSolicitud
+);
+
+router.put(
+  '/:id/aprobar',
+  authenticateJWT,
+  authorizeRoles('JEFE'),
+  aprobarSolicitud
+);
+
+router.put(
+  '/:id/rechazar',
+  authenticateJWT,
+  authorizeRoles('JEFE'),
+  rechazarSolicitud
+);
+
 module.exports = router;
