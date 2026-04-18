@@ -32,7 +32,7 @@ exports.listarSolicitudes = async (req, res) => {
 
 exports.crearSolicitud = async (req, res) => {
   try {
-    const user_id = req.user.id;   
+    const user_id = req.user.id;
     const { fecha_inicio, fecha_fin, comentario } = req.body;
 
     if (!fecha_inicio || !fecha_fin) {
@@ -70,14 +70,9 @@ exports.crearSolicitud = async (req, res) => {
       "SELECT email FROM users WHERE rol = 'JEFE'"
     );
 
-    const [userRows] = await db.query(
-      'SELECT nombre FROM users WHERE id = ?',
-      [user_id]
-    );
-
     for (let jefe of jefes) {
-      const html = renderTemplate('nuevaSolicitud', {
-        nombre: userRows[0].nombre,
+      const htmlJefe = renderTemplate('nuevaSolicitud', {
+        nombre: usuario.nombre,
         fecha_inicio,
         fecha_fin,
         comentario
@@ -86,9 +81,22 @@ exports.crearSolicitud = async (req, res) => {
       await sendEmail(
         jefe.email,
         'Nueva solicitud',
-        html
+        htmlJefe
       );
     }
+
+    const htmlTrabajador = renderTemplate('solicitudEnviada', {
+      nombre: usuario.nombre,
+      fecha_inicio,
+      fecha_fin,
+      comentario
+    });
+
+    await sendEmail(
+      usuario.email,
+      'Solicitud enviada con éxito',
+      htmlTrabajador
+    );
 
     res.json({ message: 'Solicitud creada' });
   } catch (error) {
