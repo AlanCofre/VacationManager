@@ -27,6 +27,9 @@ const recargarBtn = document.getElementById('recargarBtn');
 const workerInfo = document.getElementById('workerInfo');
 const bossInfo = document.getElementById('bossInfo');
 
+const tabsSolicitudes = document.querySelectorAll('.tab-btn');
+const solicitudesTrabajador = document.getElementById('solicitudesTrabajador');
+
 let currentUser = null;
 let currentToken = null;
 
@@ -183,7 +186,7 @@ function mostrarVistaPorRol() {
   if (currentUser.rol === 'TRABAJADOR') {
     trabajadorView.classList.remove('hidden');
     workerInfo.textContent = `Bienvenido, ${currentUser.nombre}`;
-    cargarMiSolicitud();
+    cargarSolicitudesTrabajador('pendientes');
   } else if (currentUser.rol === 'JEFE') {
     jefeView.classList.remove('hidden');
     bossInfo.textContent = `Bienvenido, ${currentUser.nombre}`;
@@ -390,3 +393,86 @@ function formatearFecha(fecha) {
 }
 
 recargarBtn?.addEventListener('click', cargarSolicitudes);
+
+function obtenerClaseEstado(estado) {
+  switch (estado) {
+    case 'PENDIENTE':
+      return 'estado pendiente';
+    case 'APROBADA':
+      return 'estado aprobada';
+    case 'RECHAZADA':
+      return 'estado rechazada';
+    case 'CANCELADA':
+      return 'estado cancelada';
+    default:
+      return 'estado';
+  }
+}
+
+function renderSolicitudesTrabajador(solicitudes) {
+  if (!solicitudes || solicitudes.length === 0) {
+    solicitudesTrabajador.innerHTML = `
+      <div class="solicitud-card">
+        <p>No hay solicitudes para mostrar.</p>
+      </div>
+    `;
+    return;
+  }
+
+  solicitudesTrabajador.innerHTML = solicitudes.map(s => `
+    <div class="solicitud-card">
+      <div class="solicitud-header">
+        <h3>${formatearFecha(s.fecha_inicio)} → ${formatearFecha(s.fecha_fin)}</h3>
+        <span class="${obtenerClaseEstado(s.estado)}">${s.estado}</span>
+      </div>
+
+      <p><strong>Comentario:</strong> ${s.comentario ? s.comentario : 'Sin comentario'}</p>
+      <p><strong>Creada:</strong> ${s.fecha_creacion ? new Date(s.fecha_creacion).toLocaleString() : 'Sin fecha'}</p>
+
+      ${s.fecha_resolucion ? `
+        <p><strong>Resuelta:</strong> ${new Date(s.fecha_resolucion).toLocaleString()}</p>
+      ` : ''}
+
+      ${s.motivo_rechazo ? `
+        <p><strong>Motivo de rechazo:</strong> ${s.motivo_rechazo}</p>
+      ` : ''}
+    </div>
+  `).join('');
+}
+
+async function cargarSolicitudesTrabajador(tipo = 'pendientes') {
+  try {
+    const token = currentToken;
+
+    const res = await fetch(`/solicitudes?tipo=${tipo}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.error || 'Error al cargar solicitudes');
+    }
+
+    renderSolicitudesTrabajador(data);
+  } catch (error) {
+    solicitudesTrabajador.innerHTML = `
+      <div class="solicitud-card">
+        <p>Error al cargar solicitudes.</p>
+      </div>
+    `;
+  }
+}
+
+tabsSolicitudes.forEach(tab => {
+  tab.addEventListener('click', () => {
+    tabsSolicitudes.forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+
+    const tipo = tab.dataset.tipo;
+    cargarSolicitudesTrabajador(tipo);
+  });
+});
