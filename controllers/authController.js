@@ -1,36 +1,21 @@
 const db = require('../config/db');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
+const sendEmail = require('../services/emailService');
+const { renderTemplate } = require('../services/templateService');
 
 exports.register = async (req, res) => {
-  try {
-    const { nombre, email, password, rol } = req.body;
+  const { nombre, email, password, rol } = req.body;
 
-    if (!nombre || !email || !password || !rol) {
-      return res.status(400).json({ error: 'Todos los campos son obligatorios' });
-    }
+  const hash = await bcrypt.hash(password, 10);
 
-    const [existing] = await db.query(
-      'SELECT id FROM users WHERE email = ?',
-      [email]
-    );
+  await db.query(
+    'INSERT INTO users (nombre, email, password_hash, rol) VALUES (?, ?, ?, ?)',
+    [nombre, email, hash, rol]
+  );
 
-    if (existing.length > 0) {
-      return res.status(409).json({ error: 'El correo ya está registrado' });
-    }
-
-    const hash = await bcrypt.hash(password, 10);
-
-    await db.query(
-      'INSERT INTO users (nombre, email, password_hash, rol) VALUES (?, ?, ?, ?)',
-      [nombre, email, hash, rol]
-    );
-
-    res.status(201).json({ message: 'Usuario creado correctamente' });
-  } catch (error) {
-    console.error('Register error:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
-  }
+  res.json({ message: 'Usuario creado' });
 };
 
 exports.login = async (req, res) => {
@@ -70,5 +55,79 @@ exports.login = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ error: 'Error en login' });
+  }
+};
+
+exports.forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    const [users] = await db.query(
+      'SELECT * FROM users WHERE email = ?',
+      [email]
+    );
+
+    if (users.length === 0) {
+      return res.status(404).json({ error: 'No existe una cuenta con ese correo' });
+    }
+
+    const user = users[0];
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const expires = new Date(Date.now() + 1000 * 60 * 30);
+
+    await db.query(
+      'UPDATE users SET reset_token = ?, reset_token_expires = ? WHERE id = ?',
+      [resetToken, expires, user.id]
+    );
+
+    const resetLink = `http://localhost:${process.env.PORT}/reset-password.html?token=${resetToken}`;
+
+    const html = renderTemplate('resetPassword', {
+      nombre: user.nombre,
+      resetLink
+    });
+
+    await sendEmail(
+      user.email,
+      'Recuperación de contraseña - Vacation Manager',
+      html
+    );
+
+    res.json({ message: 'Correo de recuperación enviado' });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al procesar recuperación de contraseña' });
+  }
+};
+
+exports.resetPassword = async (req, res) => {
+  try {
+    const { token, password } = req.body;
+
+    if (!token || !password) {
+      return res.status(400).json({ error: 'Faltan datos para restablecer la contraseña' });
+    }
+
+    const [users] = await db.query(
+      'SELECT * FROM users WHERE reset_token = ? AND reset_token_expires > NOW()',
+      [token]
+    );
+
+    if (users.length === 0) {
+      return res.status(400).json({ error: 'Token inválido o expirado' });
+    }
+
+    const user = users[0];
+    const hash = await bcrypt.hash(password, 10);
+
+    await db.query(
+      `UPDATE users 
+       SET password_hash = ?, reset_token = NULL, reset_token_expires = NULL 
+       WHERE id = ?`,
+      [hash, user.id]
+    );
+
+    res.json({ message: 'Contraseña actualizada correctamente' });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al restablecer la contraseña' });
   }
 };

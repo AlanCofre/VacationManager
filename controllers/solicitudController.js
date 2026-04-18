@@ -5,7 +5,20 @@ const { renderTemplate } = require('../services/templateService');
 exports.listarSolicitudes = async (req, res) => {
   try {
     const [rows] = await db.query(`
-      SELECT s.*, u.nombre, u.email, u.rol
+      SELECT 
+        s.id,
+        s.user_id,
+        s.fecha_inicio,
+        s.fecha_fin,
+        s.estado,
+        s.comentario,
+        s.motivo_rechazo,
+        s.fecha_creacion,
+        s.fecha_resolucion,
+        s.resuelto_por,
+        u.nombre,
+        u.email,
+        u.rol
       FROM solicitudes s
       JOIN users u ON s.user_id = u.id
       ORDER BY s.fecha_creacion DESC
@@ -57,9 +70,14 @@ exports.crearSolicitud = async (req, res) => {
       "SELECT email FROM users WHERE rol = 'JEFE'"
     );
 
+    const [userRows] = await db.query(
+      'SELECT nombre FROM users WHERE id = ?',
+      [user_id]
+    );
+
     for (let jefe of jefes) {
       const html = renderTemplate('nuevaSolicitud', {
-        nombre: usuario.nombre,
+        nombre: userRows[0].nombre,
         fecha_inicio,
         fecha_fin,
         comentario
@@ -74,7 +92,7 @@ exports.crearSolicitud = async (req, res) => {
 
     res.json({ message: 'Solicitud creada' });
   } catch (error) {
-    res.status(500).json({ error: 'Error al crear solicitud' });
+    res.status(500).json({ error: 'Error al crear la solicitud' });
   }
 };
 
@@ -118,7 +136,7 @@ exports.aprobarSolicitud = async (req, res) => {
     res.json({ message: 'Aprobada' });
 
   } catch (error) {
-    res.status(500).json({ error: 'Error al aprobar solicitud' });
+    res.status(500).json({ error: 'Error al aprobar la solicitud' });
   }
 };
 
@@ -164,6 +182,6 @@ exports.rechazarSolicitud = async (req, res) => {
     res.json({ message: 'Rechazada' });
 
   } catch (error) {
-    res.status(500).json({ error: 'Error al rechazar solicitud' });
+    res.status(500).json({ error: 'Error al rechazar la solicitud' });
   }
 };
