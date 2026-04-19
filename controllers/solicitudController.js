@@ -29,7 +29,7 @@ exports.listarSolicitudes = async (req, res) => {
     const params = [];
 
     if (req.user.rol !== 'JEFE') {
-      conditions.push('s.user_id = ?');
+      conditions.push('s.user_id = $' + (params.length + 1));
       params.push(req.user.id);
     }
 
@@ -45,9 +45,9 @@ exports.listarSolicitudes = async (req, res) => {
 
     query += ' ORDER BY s.fecha_creacion DESC';
 
-    const [rows] = await db.query(query, params);
+    const result = await db.query(query, params);
 
-    res.json(rows);
+    res.json(result.rows);
   } catch (error) {
     res.status(500).json({ error: 'Error al listar solicitudes' });
   }
@@ -62,39 +62,39 @@ exports.crearSolicitud = async (req, res) => {
       return res.status(400).json({ error: 'Faltan campos obligatorios' });
     }
 
-    const [usuarios] = await db.query(
-      'SELECT * FROM users WHERE id = ?',
+    const resultUsuarios = await db.query(
+      'SELECT * FROM users WHERE id = $1',
       [user_id]
     );
 
-    if (usuarios.length === 0) {
+    if (resultUsuarios.rows.length === 0) {
       return res.status(404).json({ error: 'Usuario no encontrado' });
     }
 
-    const usuario = usuarios[0];
+    const usuario = resultUsuarios.rows[0];
 
-    const [existentes] = await db.query(
+    const resultExistentes = await db.query(
       `SELECT * FROM solicitudes 
-       WHERE user_id = ? AND estado = 'PENDIENTE'`,
+       WHERE user_id = $1 AND estado = 'PENDIENTE'`,
       [user_id]
     );
 
-    if (existentes.length > 0) {
+    if (resultExistentes.rows.length > 0) {
       return res.status(400).json({ error: 'Ya tienes una solicitud pendiente' });
     }
 
-    const [solapadas] = await db.query(`
+    const resultSolapadas = await db.query(`
       SELECT id FROM solicitudes
-      WHERE user_id = ?
+      WHERE user_id = $1
       AND estado IN ('PENDIENTE', 'APROBADA')
       AND (
-        fecha_inicio <= ?
-        AND fecha_fin >= ?
+        fecha_inicio <= $2
+        AND fecha_fin >= $3
       )
       LIMIT 1
     `, [user_id, fecha_fin, fecha_inicio]);
 
-    if (solapadas.length > 0) {
+    if (resultSolapadas.rows.length > 0) {
       return res.status(400).json({
         error: 'Ya tienes solicitudes en ese rango de fechas'
       });
@@ -102,15 +102,15 @@ exports.crearSolicitud = async (req, res) => {
 
     await db.query(
       `INSERT INTO solicitudes (user_id, fecha_inicio, fecha_fin, comentario)
-       VALUES (?, ?, ?, ?)`,
+       VALUES ($1, $2, $3, $4)`,
       [user_id, fecha_inicio, fecha_fin, comentario]
     );
 
-    const [jefes] = await db.query(
+    const resultJefes = await db.query(
       "SELECT email FROM users WHERE rol = 'JEFE'"
     );
 
-    for (let jefe of jefes) {
+    for (let jefe of resultJefes.rows) {
       const htmlJefe = renderTemplate('nuevaSolicitud', {
         nombre: usuario.nombre,
         fecha_inicio,
@@ -149,37 +149,37 @@ exports.aprobarSolicitud = async (req, res) => {
     const { id } = req.params;
     const user = req.user;
 
-    const [result] = await db.query(
+    const result = await db.query(
       `UPDATE solicitudes
        SET estado = 'APROBADA', 
            fecha_resolucion = NOW(),
-           resuelto_por = ?
-       WHERE id = ? AND estado = 'PENDIENTE'`,
-      [user.id, id]
+           resuelto_por = $1
+       WHERE id = $2 AND estado = 'PENDIENTE'`,
+      [user.id, parseInt(id)]
     );
 
-    if (result.affectedRows === 0) {
+    if (result.rowCount === 0) {
       return res.status(400).json({
         error: 'La solicitud no existe o ya fue procesada'
       });
     }
 
-    const [rows] = await db.query(
+    const resultRows = await db.query(
       `SELECT u.email, u.nombre, s.fecha_inicio, s.fecha_fin
        FROM solicitudes s
        JOIN users u ON s.user_id = u.id
-       WHERE s.id = ?`,
-      [id]
+       WHERE s.id = $1`,
+      [parseInt(id)]
     );
 
     const html = renderTemplate('solicitudAprobada', {
-      nombre: rows[0].nombre,
-      fecha_inicio: rows[0].fecha_inicio,
-      fecha_fin: rows[0].fecha_fin
+      nombre: resultRows.rows[0].nombre,
+      fecha_inicio: resultRows.rows[0].fecha_inicio,
+      fecha_fin: resultRows.rows[0].fecha_fin
     });
 
     await sendEmail(
-      rows[0].email,
+      resultRows.rows[0].email,
       'Solicitud aprobada',
       html
     );
@@ -197,39 +197,39 @@ exports.rechazarSolicitud = async (req, res) => {
     const { motivo } = req.body;
     const user = req.user;
 
-    const [result] = await db.query(
+    const result = await db.query(
       `UPDATE solicitudes
        SET estado = 'RECHAZADA', 
-           motivo_rechazo = ?, 
+           motivo_rechazo = $1, 
            fecha_resolucion = NOW(),
-           resuelto_por = ?
-       WHERE id = ? AND estado = 'PENDIENTE'`,
-      [motivo, user.id, id]
+           resuelto_por = $2
+       WHERE id = $3 AND estado = 'PENDIENTE'`,
+      [motivo, user.id, parseInt(id)]
     );
 
-    if (result.affectedRows === 0) {
+    if (result.rowCount === 0) {
       return res.status(400).json({
         error: 'La solicitud no existe o ya fue procesada'
       });
     }
 
-    const [rows] = await db.query(
+    const resultRows = await db.query(
       `SELECT u.email, u.nombre, s.fecha_inicio, s.fecha_fin
        FROM solicitudes s
        JOIN users u ON s.user_id = u.id
-       WHERE s.id = ?`,
-      [id]
+       WHERE s.id = $1`,
+      [parseInt(id)]
     );
 
     const html = renderTemplate('solicitudRechazada', {
-      nombre: rows[0].nombre,
-      fecha_inicio: rows[0].fecha_inicio,
-      fecha_fin: rows[0].fecha_fin,
+      nombre: resultRows.rows[0].nombre,
+      fecha_inicio: resultRows.rows[0].fecha_inicio,
+      fecha_fin: resultRows.rows[0].fecha_fin,
       motivo
     });
 
     await sendEmail(
-      rows[0].email,
+      resultRows.rows[0].email,
       'Solicitud rechazada',
       html
     );

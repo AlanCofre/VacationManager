@@ -244,7 +244,7 @@ solicitudForm?.addEventListener('submit', async (e) => {
     workerMensaje.textContent = result.message || 'Solicitud enviada';
     workerMensaje.style.color = 'green';
     solicitudForm.reset();
-    cargarMiSolicitud();
+    cargarSolicitudesTrabajador('pendientes');
   } catch (error) {
     workerMensaje.textContent = 'Error al enviar la solicitud';
     workerMensaje.style.color = 'red';

@@ -11,7 +11,7 @@ exports.register = async (req, res) => {
   const hash = await bcrypt.hash(password, 10);
 
   await db.query(
-    'INSERT INTO users (nombre, email, password_hash, rol) VALUES (?, ?, ?, ?)',
+    'INSERT INTO users (nombre, email, password_hash, rol) VALUES ($1, $2, $3, $4)',
     [nombre, email, hash, rol]
   );
 
@@ -22,16 +22,16 @@ exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const [users] = await db.query(
-      'SELECT * FROM users WHERE email = ?',
+    const result = await db.query(
+      'SELECT * FROM users WHERE email = $1',
       [email]
     );
 
-    if (users.length === 0) {
+    if (result.rows.length === 0) {
       return res.status(401).json({ error: 'Usuario no encontrado' });
     }
 
-    const user = users[0];
+    const user = result.rows[0];
 
     const match = await bcrypt.compare(password, user.password_hash);
 
@@ -62,21 +62,21 @@ exports.forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
 
-    const [users] = await db.query(
-      'SELECT * FROM users WHERE email = ?',
+    const result = await db.query(
+      'SELECT * FROM users WHERE email = $1',
       [email]
     );
 
-    if (users.length === 0) {
+    if (result.rows.length === 0) {
       return res.status(404).json({ error: 'No existe una cuenta con ese correo' });
     }
 
-    const user = users[0];
+    const user = result.rows[0];
     const resetToken = crypto.randomBytes(32).toString('hex');
     const expires = new Date(Date.now() + 1000 * 60 * 30);
 
     await db.query(
-      'UPDATE users SET reset_token = ?, reset_token_expires = ? WHERE id = ?',
+      'UPDATE users SET reset_token = $1, reset_token_expires = $2 WHERE id = $3',
       [resetToken, expires, user.id]
     );
 
@@ -107,22 +107,22 @@ exports.resetPassword = async (req, res) => {
       return res.status(400).json({ error: 'Faltan datos para restablecer la contraseña' });
     }
 
-    const [users] = await db.query(
-      'SELECT * FROM users WHERE reset_token = ? AND reset_token_expires > NOW()',
+    const result = await db.query(
+      'SELECT * FROM users WHERE reset_token = $1 AND reset_token_expires::timestamptz > CURRENT_TIMESTAMP',
       [token]
     );
 
-    if (users.length === 0) {
+    if (result.rows.length === 0) {
       return res.status(400).json({ error: 'Token inválido o expirado' });
     }
 
-    const user = users[0];
+    const user = result.rows[0];
     const hash = await bcrypt.hash(password, 10);
 
     await db.query(
       `UPDATE users 
-       SET password_hash = ?, reset_token = NULL, reset_token_expires = NULL 
-       WHERE id = ?`,
+       SET password_hash = $1, reset_token = NULL, reset_token_expires = NULL 
+       WHERE id = $2`,
       [hash, user.id]
     );
 
