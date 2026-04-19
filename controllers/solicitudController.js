@@ -172,7 +172,12 @@ exports.aprobarSolicitud = async (req, res) => {
       [parseInt(id)]
     );
 
-    const html = renderTemplate('solicitudAprobada', {
+    const jefeResult = await db.query(
+      'SELECT nombre, email FROM users WHERE id = $1',
+      [user.id]
+    );
+
+    const htmlTrabajador = renderTemplate('solicitudAprobada', {
       nombre: resultRows.rows[0].nombre,
       fecha_inicio: resultRows.rows[0].fecha_inicio,
       fecha_fin: resultRows.rows[0].fecha_fin
@@ -181,7 +186,22 @@ exports.aprobarSolicitud = async (req, res) => {
     await sendEmail(
       resultRows.rows[0].email,
       'Solicitud aprobada',
-      html
+      htmlTrabajador
+    );
+
+    const htmlJefe = renderTemplate('jefeResolviste', {
+      nombreJefe: jefeResult.rows[0].nombre,
+      accion: 'aprobado',
+      nombreEmpleado: resultRows.rows[0].nombre,
+      fechaInicio: resultRows.rows[0].fecha_inicio,
+      fechaFin: resultRows.rows[0].fecha_fin,
+      estado: 'APROBADA'
+    });
+
+    await sendEmail(
+      jefeResult.rows[0].email,
+      'Solicitud resuelta',
+      htmlJefe
     );
 
     res.json({ message: 'Aprobada' });
@@ -221,7 +241,12 @@ exports.rechazarSolicitud = async (req, res) => {
       [parseInt(id)]
     );
 
-    const html = renderTemplate('solicitudRechazada', {
+    const jefeResult = await db.query(
+      'SELECT nombre, email FROM users WHERE id = $1',
+      [user.id]
+    );
+
+    const htmlTrabajador = renderTemplate('solicitudRechazada', {
       nombre: resultRows.rows[0].nombre,
       fecha_inicio: resultRows.rows[0].fecha_inicio,
       fecha_fin: resultRows.rows[0].fecha_fin,
@@ -231,7 +256,22 @@ exports.rechazarSolicitud = async (req, res) => {
     await sendEmail(
       resultRows.rows[0].email,
       'Solicitud rechazada',
-      html
+      htmlTrabajador
+    );
+
+    const htmlJefe = renderTemplate('jefeResolviste', {
+      nombreJefe: jefeResult.rows[0].nombre,
+      accion: 'rechazado',
+      nombreEmpleado: resultRows.rows[0].nombre,
+      fechaInicio: resultRows.rows[0].fecha_inicio,
+      fechaFin: resultRows.rows[0].fecha_fin,
+      estado: 'RECHAZADA'
+    });
+
+    await sendEmail(
+      jefeResult.rows[0].email,
+      'Solicitud resuelta',
+      htmlJefe
     );
 
     res.json({ message: 'Rechazada' });
