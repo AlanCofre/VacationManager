@@ -98,7 +98,11 @@
             <h2>Panel Trabajador</h2>
             <p id="workerInfo"></p>
           </div>
-          <button class="btn secondary" onclick="cerrarSesion()">Cerrar sesión</button>
+
+          <div class="panel-actions">
+            <button class="btn secondary" onclick="mostrarPerfil()">Mi perfil</button>
+            <button class="btn secondary" onclick="cerrarSesion()">Cerrar sesión</button>
+          </div>
         </div>
 
         <form id="solicitudForm">
@@ -144,11 +148,33 @@
             <h2>Panel Jefe</h2>
             <p id="bossInfo"></p>
           </div>
-          <button class="btn secondary" onclick="cerrarSesion()">Cerrar sesión</button>
+
+          <div class="panel-actions">
+            <button class="btn secondary" onclick="mostrarPerfil()">Mi perfil</button>
+            <button class="btn secondary" onclick="cerrarSesion()">Cerrar sesión</button>
+          </div>
         </div>
 
         <button id="recargarBtn" class="btn primary">Recargar solicitudes</button>
         <div id="solicitudesLista" class="solicitudes-lista"></div>
+      </div>
+    </section>
+
+    <section id="perfilView" class="hidden">
+      <div class="card">
+        <div class="panel-top">
+          <div>
+            <h2>Mi perfil</h2>
+            <p id="perfilSubtitulo"></p>
+          </div>
+
+          <div class="panel-actions">
+            <button class="btn secondary" onclick="volverDesdePerfil()">Volver</button>
+            <button class="btn secondary" onclick="cerrarSesion()">Cerrar sesión</button>
+          </div>
+        </div>
+
+        <div id="perfilContenido" class="solicitudes-lista"></div>
       </div>
     </section>
   </div>
