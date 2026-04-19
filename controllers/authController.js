@@ -126,6 +126,16 @@ exports.resetPassword = async (req, res) => {
       [hash, user.id]
     );
 
+    const html = renderTemplate('resetPassExitoso', {
+      nombre: user.nombre
+    });
+
+    await sendEmail(
+      user.email,
+      'Cambio de contraseña exitoso - Vacation Manager',
+      html
+    );
+
     res.json({ message: 'Contraseña actualizada correctamente' });
   } catch (error) {
     res.status(500).json({ error: 'Error al restablecer la contraseña' });
