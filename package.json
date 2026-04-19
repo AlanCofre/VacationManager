@@ -6,7 +6,7 @@
     "express": "^5.2.1",
     "handlebars": "^4.7.9",
     "jsonwebtoken": "^9.0.3",
-    "mysql2": "^3.20.0"
+    "pg": "^8.11.0"
   },
   "name": "vacationmanager",
   "version": "1.0.0",
