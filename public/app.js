@@ -30,6 +30,13 @@ const bossInfo = document.getElementById('bossInfo');
 const tabsSolicitudes = document.querySelectorAll('.tab-btn');
 const solicitudesTrabajador = document.getElementById('solicitudesTrabajador');
 
+const perfilTrabajador = document.getElementById('perfilTrabajador');
+const perfilJefe = document.getElementById('perfilJefe');
+
+const perfilView = document.getElementById('perfilView');
+const perfilContenido = document.getElementById('perfilContenido');
+const perfilSubtitulo = document.getElementById('perfilSubtitulo');
+
 let currentUser = null;
 let currentToken = null;
 
@@ -186,10 +193,12 @@ function mostrarVistaPorRol() {
   if (currentUser.rol === 'TRABAJADOR') {
     trabajadorView.classList.remove('hidden');
     workerInfo.textContent = `Bienvenido, ${currentUser.nombre}`;
+    renderPerfilTrabajador();
     cargarSolicitudesTrabajador('pendientes');
   } else if (currentUser.rol === 'JEFE') {
     jefeView.classList.remove('hidden');
     bossInfo.textContent = `Bienvenido, ${currentUser.nombre}`;
+    renderPerfilJefe();
     cargarSolicitudes();
   }
 }
@@ -209,6 +218,16 @@ function cerrarSesion() {
   forgotMensaje.textContent = '';
   miSolicitud.innerHTML = '';
   if (solicitudesLista) solicitudesLista.innerHTML = '';
+  if (perfilTrabajador) perfilTrabajador.innerHTML = '';
+  if (perfilJefe) perfilJefe.innerHTML = '';
+  if (solicitudesTrabajador) solicitudesTrabajador.innerHTML = '';
+  if (perfilContenido) perfilContenido.innerHTML = '';
+  if (perfilSubtitulo) perfilSubtitulo.textContent = '';
+  if (solicitudesLista) solicitudesLista.innerHTML = '';
+
+  trabajadorView.classList.add('hidden');
+  jefeView.classList.add('hidden');
+  perfilView.classList.add('hidden');
 
   mostrarLogin();
 }
@@ -440,6 +459,75 @@ function renderSolicitudesTrabajador(solicitudes) {
   `).join('');
 }
 
+function renderPerfilTrabajador() {
+  if (!perfilTrabajador || !currentUser) return;
+
+  perfilTrabajador.innerHTML = `
+    <div class="solicitud-card">
+      <p><strong>Nombre:</strong> ${currentUser.nombre}</p>
+      <p><strong>Correo:</strong> ${currentUser.email}</p>
+      <p><strong>Rol:</strong> ${currentUser.rol}</p>
+      <p><strong>Días libres acumulados:</strong> 15 días</p>
+      <p><strong>Área:</strong> Recursos Humanos</p>
+    </div>
+  `;
+}
+
+function renderPerfilJefe() {
+  if (!perfilJefe || !currentUser) return;
+
+  perfilJefe.innerHTML = `
+    <div class="solicitud-card">
+      <p><strong>Nombre:</strong> ${currentUser.nombre}</p>
+      <p><strong>Correo:</strong> ${currentUser.email}</p>
+      <p><strong>Rol:</strong> ${currentUser.rol}</p>
+    </div>
+  `;
+}
+
+function mostrarPerfil() {
+  loginView.classList.add('hidden');
+  registerView.classList.add('hidden');
+  forgotPasswordView.classList.add('hidden');
+  trabajadorView.classList.add('hidden');
+  jefeView.classList.add('hidden');
+  perfilView.classList.remove('hidden');
+
+  renderPerfil();
+}
+
+function volverDesdePerfil() {
+  perfilView.classList.add('hidden');
+  mostrarVistaPorRol();
+}
+
+function renderPerfil() {
+  if (!currentUser || !perfilContenido) return;
+
+  perfilSubtitulo.textContent = `Información de ${currentUser.nombre}`;
+
+  if (currentUser.rol === 'TRABAJADOR') {
+    perfilContenido.innerHTML = `
+      <div class="solicitud-card">
+        <p><strong>Nombre:</strong> ${currentUser.nombre}</p>
+        <p><strong>Correo:</strong> ${currentUser.email}</p>
+        <p><strong>Rol:</strong> ${currentUser.rol}</p>
+        <p><strong>Días libres acumulados:</strong> 15 días</p>
+        <p><strong>Área:</strong> Recursos Humanos</p>
+      </div>
+    `;
+  } else if (currentUser.rol === 'JEFE') {
+    perfilContenido.innerHTML = `
+      <div class="solicitud-card">
+        <p><strong>Nombre:</strong> ${currentUser.nombre}</p>
+        <p><strong>Correo:</strong> ${currentUser.email}</p>
+        <p><strong>Rol:</strong> ${currentUser.rol}</p>
+        <p><strong>Área:</strong> Gerencia</p>
+      </div>
+    `;
+  }
+}
+
 async function cargarSolicitudesTrabajador(tipo = 'pendientes') {
   try {
     const token = currentToken;
@@ -476,3 +564,7 @@ tabsSolicitudes.forEach(tab => {
     cargarSolicitudesTrabajador(tipo);
   });
 });
+
+window.mostrarPerfil = mostrarPerfil;
+window.volverDesdePerfil = volverDesdePerfil;
+window.cerrarSesion = cerrarSesion;

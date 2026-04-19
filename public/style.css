@@ -215,3 +215,21 @@ textarea {
     align-items: flex-start;
   }
 }
+
+.perfil-box {
+  margin-top: 12px;
+}
+
+.perfil-box .solicitud-card p {
+  margin: 8px 0;
+}
+
+#perfilView {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+#perfilContenido .solicitud-card p {
+  margin: 10px 0;
+  font-size: 15px;
+}
